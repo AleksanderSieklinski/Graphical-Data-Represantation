@@ -1,6 +1,6 @@
 #include "GUIMyFrame1.h"
 
-#define PANEL_WIDTH 500
+#define PANEL_WIDTH 500 
 #define PANEL_HEIGHT 500
 
 float FunctionData[100][3];
