@@ -37,11 +37,13 @@ class GUIMyFrame1 : public MyFrame1
 	//// end generated class members
 	wxBitmap m_bitmap;
 	wxImage m_image;
-	void Draw(float points[100][3]);
+	void Draw(int N, float d[100][3], bool ShowColor, double alpha);
 	void Repaint();
 	void PrepareData(int);
-	double rotation = 0, tilt = 0;
+	int NoPoints = 5, choice = 0;
 	bool ShowColor = false;
+	float tilt= 100;
+	double alpha = 133;
 };
 
 #endif // __GUIMyFrame1__

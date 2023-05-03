@@ -14,22 +14,9 @@ MyFrame1( parent )
     m_bitmap.Create(PANEL_WIDTH, PANEL_HEIGHT, 24);
     m_image.Create(PANEL_WIDTH, PANEL_HEIGHT);
 	PrepareData(0);
-	Draw(FunctionData);
+	Draw(NoPoints, FunctionData, ShowColor, alpha);
+	Repaint();
 }
-
-// ZADANIE: 
-//Zadanie polega na napisaniu programu rysującego funkcje typu f(x,y). Funkcja podana jest w postaci zbioru
-//wartości wi w różnych punktach (xi,yi) przy czym wiadomo, że wartości funkcji w tych punktach zawsze mieszczą się
-//w zakresie od -2.5 do 2.5. Punkty są rozrzucone przypadkowo. Funkcja będzie prezentowana w postaci pseudo
-//trójwymiarowego „krajobrazu” wygenerowanego metodą „voxel space” w wersji kolorowej lub w odcieniach
-//szarości. Idea tej metody była wyjaśniona na wykładzie
-
-// Zarys możliwego rozwiązania:
-//Przygotowane fragmenty kodu generują GUI i nic ponad to. Do plików źródłowych dołączono również plik
-//projektu programu wxFormBuilder aby można było dostosować program do swoich potrzeb. Do plików źródłowych
-//dołączono również plik „PrepareData.cpp”. W odczuciu prowadzącego funkcja ta wymaga znaczącej refaktoryzacji
-//(podpowiedz: czy osoba pisząca tę funkcję wiedziała, że funkcja może również zwracać std::vector? ;-P ). Oczywiście
-//nie jest to konieczne.
 
 float Shepard(int N, float d[100][3], float x, float y)
 {
@@ -110,133 +97,110 @@ void GUIMyFrame1::PrepareData(int fun)
 
 void GUIMyFrame1::Repaint()
 {
-    Draw(FunctionData);
+    wxMemoryDC memDC;
+	memDC.SelectObject(m_bitmap);
+	wxClientDC dc(m_panel1);
+	dc.Blit(0, 0, 500, 500, &memDC, 0, 0);
+	memDC.SelectObject(wxNullBitmap);
 }
 
-//Przykładowa zawartość funkcji Draw(…).
-//Panel ma rozmiar 500x500 i tyle wystarczy – okno nie może zmieniać rozmiarów co powinno znacznie
-//ułatwić zadanie. Dla przykładu, funkcja może wyglądać następująco:
-//1. Obracamy wszystkie punkty o zadany kąt rotation.
-//2. Interpolujemy funkcję do regularnej siatki metodą Sheparda
-//3. Wyznaczamy najmniejszą i największą wartość funkcji
-//4. Rysujemy krajobraz metodą „voxel space” .
-
-
-void GUIMyFrame1::Draw(float point[100][3])
+void GUIMyFrame1::Draw(int N, float d[100][3],bool ShowColor, double alpha)
 {
-    // Create the image with a fixed size of 500x500
-    wxImage image(500, 500);
+	wxMemoryDC memDC;
+	memDC.SelectObject(m_bitmap);
+	memDC.SetBackground(*wxWHITE_BRUSH);
+	memDC.Clear();
+	memDC.SetPen(*wxBLACK_PEN);
+	memDC.SetBrush(*wxTRANSPARENT_BRUSH);
 
-    // Rotate the points by the given angle
-    float cos_t = cos(rotation);
-    float sin_t = sin(rotation);
+	float width = 1;
+	float height = 3 + tilt * 0.07;
 
-    for (int i = 0; i < NoPoints; i++) {
-        float x = point[i][0];
-        float y = point[i][1];
+	PrepareData(choice);
 
-        point[i][0] = x * cos_t - y * sin_t;
-        point[i][1] = x * sin_t + y * cos_t;
-    }
+	float coso = cos(alpha);
+	float sino = sin(alpha);
 
-    // Interpolate the function to a regular grid using Shepard's method
-    float grid[500][500];
-    float step = 2.0 / 499;
+	for (int i = 0; i < N; i++) {
+		float x = d[i][0];
+		float y = d[i][1];
 
-    for (int i = 0; i < 500; i++) {
-        for (int j = 0; j < 500; j++) {
-            float sum_w = 0.0;
-            float sum_wz = 0.0;
+		d[i][0] = x * coso - y * sino;
+		d[i][1] = x * sino + y * coso;
+	}
 
-            for (int k = 0; k < NoPoints; k++) {
-                float dx = point[k][0] - (-1.0 + i * step);
-                float dy = point[k][1] - (-1.0 + j * step);
-                float dz = point[k][2];
 
-                float w = 1.0 / pow(dx * dx + dy * dy, 1.5);
-                sum_w += w;
-                sum_wz += w * dz;
-            }
+	auto values = new float[400][400];
+	for (int y = 0; y < 400; y++)
+		for (int x = 0; x < 400; x++)
+		{
+			values[x][y] = Shepard(N, d, x*1.25 / 100.0 - 2.5, -y * 1.25 / 100.0 + 2.5);
+		}
+	float min = d[0][2], max = d[0][2];
+	for (int i = 0; i < N; i++) {
+		if (d[i][2] < min)
+			min = d[i][2];
+		if (d[i][2] > max)
+			max = d[i][2];
+	}
 
-            if (sum_w == 0.0) {
-                grid[i][j] = 0.0;
-            }
-            else {
-                grid[i][j] = sum_wz / sum_w;
-            }
-        }
-    }
-
-    // Find the minimum and maximum values of the function
-    float max_z = -FLT_MAX;
-    float min_z = FLT_MAX;
-
-    for (int i = 0; i < 500; i++) {
-        for (int j = 0; j < 500; j++) {
-            float z = grid[i][j];
-            if (z > max_z) {
-                max_z = z;
-            }
-            if (z < min_z) {
-                min_z = z;
-            }
-        }
-    }
-
-    // Draw the 3D landscape using the "voxel space" method
-    for (int i = 0; i < 500; i++) {
-        for (int j = 0; j < 500; j++) {
-            float z = grid[i][j];
-            unsigned char r, g, b;
-
-            // Map the z value to a color
-            if (max_z != min_z) {
-                float t = (z - min_z) / (max_z - min_z);
-                r = (unsigned char)((1.0 - t) * 255);
-                g = 0;
-                b = (unsigned char)(t * 255);
-            }
-            else {
-                r = 0;
-                g = 0;
-                b = 0;
-            }
-
-            // Draw the voxel on the image
-            for (int k = 0; k < 3; k++) {
-                int pixel_x = i;
-                int pixel_y = j;
-                int pixel_z = (int)((z + 1.0) * 250);
-
-				if (k == 0) {
-					pixel_x--;
-				}
-				else if (k == 1) {
-					pixel_y--;
-				}
-				else {
-					pixel_z--;
-				}
-				
-				if (pixel_x >= 0 && pixel_x < 500 &&
-					pixel_y >= 0 && pixel_y < 500 &&
-					pixel_z >= 0 && pixel_z < 500) {
-					image.SetRGB(pixel_x, pixel_y, r, g, b);
-				}
+	if (ShowColor == true) {
+		unsigned char* data = new unsigned char[480000];
+		for (int x = 0; x < 400; x++) {
+			for (int y = 0; y < 400; y++) {
+				float color = ((values[x][y]) - min) / (max - min);
+				data[y * 400 * 3 + x * 3 + 0] = 255 * color;
+				data[y * 400 * 3 + x * 3 + 1] = 0;
+				data[y * 400 * 3 + x * 3 + 2] = 255 - 255 * color;
 			}
 		}
+
+		for (int i = 0; i < 40; i++) {
+			for (int j = 0; j < 80; j++) {
+				float color = ((values[i * 10][j * 5] - min)) / (max - min) * 50 + 51;
+				memDC.SetPen(wxColor(data[j * 5 * 400 * 3 + i * 10 * 3 + 0], data[j * 5 * 400 * 3 + i * 10 * 3 + 1], data[j * 5 * 400 * 3 + i * 10 * 3 + 2]));
+
+				memDC.SetBrush(wxColor(data[j * 5 * 400 * 3 + i * 10 * 3 + 0], data[j * 5 * 400 * 3 + i * 10 * 3 + 1], data[j * 5 * 400 * 3 + i * 10 * 3 + 2]));
+				memDC.DrawRectangle(500 - (width*i + width * j * 5), 50 + height * i - color, width * 10, color);
+			}
+		}
+		return;
+
 	}
-	
-	wxClientDC dc(m_panel1);
-	wxBufferedDC buff_dc(&dc);
-	wxBitmap bitmap(image);
-	buff_dc.DrawBitmap(bitmap, 0, 0, false);
+
+	if (ShowColor == false) {
+		unsigned char* data = new unsigned char[480000];
+		unsigned char* new_data = new unsigned char[480000];
+		for (int x = 0; x < 400; x++) {
+			for (int y = 0; y < 400; y++) {
+				float color = (values[x][y] - min) / (max - min);
+				data[y * 400 * 3 + x * 3 + 0] = 255 * color;
+				data[y * 400 * 3 + x * 3 + 1] = 255 * color;
+				data[y * 400 * 3 + x * 3 + 2] = 255 * color;
+			}
+
+		}
+
+		for (int i = 0; i < 40; i++) {
+			for (int j = 0; j < 80; j++) {
+				float color = ((values[i * 10][j * 5] - min)) / (max - min) * 50 + 51;
+				memDC.SetPen(wxColor(data[j * 5 * 400 * 3 + i * 10 * 3 + 0], data[j * 5 * 400 * 3 + i * 10 * 3 + 1], data[j * 5 * 400 * 3 + i * 10 * 3 + 2]));
+				memDC.SetBrush(wxColor(data[j * 5 * 400 * 3 + i * 10 * 3 + 0], data[j * 5 * 400 * 3 + i * 10 * 3 + 1], data[j * 5 * 400 * 3 + i * 10 * 3 + 2]));
+				memDC.DrawRectangle(500 - (width*i + width * j * 5), 50 + height * i - color, width * 10, color);
+			}
+		}
+
+	}
+
 }
 
 void GUIMyFrame1::m_button1_click( wxCommandEvent& event )
 {
+
 	// TODO: Implement m_button1_click
 	PrepareData(1);
+	choice = 1;
+    Draw(NoPoints, FunctionData, ShowColor, alpha);
 	Repaint();
 }
 
@@ -244,6 +208,8 @@ void GUIMyFrame1::m_button2_click( wxCommandEvent& event )
 {
 	// TODO: Implement m_button2_click
 	PrepareData(2);
+	choice = 2;
+    Draw(NoPoints, FunctionData, ShowColor, alpha);
 	Repaint();
 }
 
@@ -251,6 +217,8 @@ void GUIMyFrame1::m_button3_click( wxCommandEvent& event )
 {
 	// TODO: Implement m_button3_click
 	PrepareData(3);
+	choice = 3;
+    Draw(NoPoints, FunctionData, ShowColor, alpha);
 	Repaint();
 }
 
@@ -258,6 +226,8 @@ void GUIMyFrame1::m_button4_click( wxCommandEvent& event )
 {
 	// TODO: Implement m_button4_click
 	PrepareData(4);
+	choice = 4;
+    Draw(NoPoints, FunctionData, ShowColor, alpha);
 	Repaint();
 }
 
@@ -265,6 +235,7 @@ void GUIMyFrame1::m_cb_color_click( wxCommandEvent& event )
 {
 	// TODO: Implement m_cb_color_click
 	ShowColor == true ? ShowColor = false : ShowColor = true;
+	Draw(NoPoints, FunctionData, ShowColor, alpha);
 	Repaint();
 }
 
@@ -272,7 +243,8 @@ void GUIMyFrame1::m_s_rotation_onscroll( wxScrollEvent& event )
 {
 	m_st_rotation->SetLabel(wxString::Format("Obrot: %d stopni.",m_s_rotation->GetValue()));
 	// TODO: Implement m_s_rotation_onscroll
-	rotation = m_s_rotation->GetValue() * M_PI / 180;
+	alpha = m_s_rotation->GetValue() * M_PI / 180;
+	Draw(NoPoints, FunctionData, ShowColor, alpha);
 	Repaint();
 }
 
@@ -280,5 +252,6 @@ void GUIMyFrame1::m_s_tilt_onscroll( wxScrollEvent& event )
 {
 // TODO: Implement m_s_tilt_onscroll
 	tilt = m_s_tilt->GetValue();
+    Draw(NoPoints, FunctionData, ShowColor, alpha);
 	Repaint();
 }
