@@ -114,7 +114,7 @@ void GUIMyFrame1::Draw(int N, float d[100][3],bool ShowColor, double alpha)
 	memDC.SetBrush(*wxTRANSPARENT_BRUSH);
 
 	float width = 1;
-	float height = 3 + tilt * 0.07;
+	float height = 2 + tilt * 0.05;
 
 	PrepareData(choice);
 
@@ -130,9 +130,9 @@ void GUIMyFrame1::Draw(int N, float d[100][3],bool ShowColor, double alpha)
 	}
 
 
-	auto values = new float[400][400];
-	for (int y = 0; y < 400; y++)
-		for (int x = 0; x < 400; x++)
+	auto values = new float[500][500];
+	for (int y = 0; y < 500; y++)
+		for (int x = 0; x < 500; x++)
 		{
 			values[x][y] = Shepard(N, d, x*1.25 / 100.0 - 2.5, -y * 1.25 / 100.0 + 2.5);
 		}
@@ -145,23 +145,23 @@ void GUIMyFrame1::Draw(int N, float d[100][3],bool ShowColor, double alpha)
 	}
 
 	if (ShowColor == true) {
-		unsigned char* data = new unsigned char[480000];
-		for (int x = 0; x < 400; x++) {
-			for (int y = 0; y < 400; y++) {
+		unsigned char* data = new unsigned char[750000];
+		for (int x = 0; x < 500; x++) {
+			for (int y = 0; y < 500; y++) {
 				float color = ((values[x][y]) - min) / (max - min);
-				data[y * 400 * 3 + x * 3 + 0] = 255 * color;
-				data[y * 400 * 3 + x * 3 + 1] = 0;
-				data[y * 400 * 3 + x * 3 + 2] = 255 - 255 * color;
+				data[y * 500 * 3 + x * 3 + 0] = 255 * color;
+				data[y * 500 * 3 + x * 3 + 1] = 0;
+				data[y * 500 * 3 + x * 3 + 2] = 255 - 255 * color;
 			}
 		}
 
 		for (int i = 0; i < 40; i++) {
 			for (int j = 0; j < 80; j++) {
 				float color = ((values[i * 10][j * 5] - min)) / (max - min) * 50 + 51;
-				memDC.SetPen(wxColor(data[j * 5 * 400 * 3 + i * 10 * 3 + 0], data[j * 5 * 400 * 3 + i * 10 * 3 + 1], data[j * 5 * 400 * 3 + i * 10 * 3 + 2]));
+				memDC.SetPen(wxColor(data[j * 5 * 500 * 3 + i * 10 * 3 + 0], data[j * 5 * 500 * 3 + i * 10 * 3 + 1], data[j * 5 * 500 * 3 + i * 10 * 3 + 2]));
 
-				memDC.SetBrush(wxColor(data[j * 5 * 400 * 3 + i * 10 * 3 + 0], data[j * 5 * 400 * 3 + i * 10 * 3 + 1], data[j * 5 * 400 * 3 + i * 10 * 3 + 2]));
-				memDC.DrawRectangle(500 - (width*i + width * j * 5), 50 + height * i - color, width * 10, color);
+				memDC.SetBrush(wxColor(data[j * 5 * 500 * 3 + i * 10 * 3 + 0], data[j * 5 * 500 * 3 + i * 10 * 3 + 1], data[j * 5 * 500 * 3 + i * 10 * 3 + 2]));
+				memDC.DrawRectangle(500 - (width*i + width * j * 5), 150 + height * i - color, width * 10, color);
 			}
 		}
 		return;
@@ -169,14 +169,14 @@ void GUIMyFrame1::Draw(int N, float d[100][3],bool ShowColor, double alpha)
 	}
 
 	if (ShowColor == false) {
-		unsigned char* data = new unsigned char[480000];
-		unsigned char* new_data = new unsigned char[480000];
-		for (int x = 0; x < 400; x++) {
-			for (int y = 0; y < 400; y++) {
+		unsigned char* data = new unsigned char[750000];
+		unsigned char* new_data = new unsigned char[750000];
+		for (int x = 0; x < 500; x++) {
+			for (int y = 0; y < 500; y++) {
 				float color = (values[x][y] - min) / (max - min);
-				data[y * 400 * 3 + x * 3 + 0] = 255 * color;
-				data[y * 400 * 3 + x * 3 + 1] = 255 * color;
-				data[y * 400 * 3 + x * 3 + 2] = 255 * color;
+				data[y * 500 * 3 + x * 3 + 0] = 255 * color;
+				data[y * 500 * 3 + x * 3 + 1] = 255 * color;
+				data[y * 500 * 3 + x * 3 + 2] = 255 * color;
 			}
 
 		}
@@ -184,9 +184,9 @@ void GUIMyFrame1::Draw(int N, float d[100][3],bool ShowColor, double alpha)
 		for (int i = 0; i < 40; i++) {
 			for (int j = 0; j < 80; j++) {
 				float color = ((values[i * 10][j * 5] - min)) / (max - min) * 50 + 51;
-				memDC.SetPen(wxColor(data[j * 5 * 400 * 3 + i * 10 * 3 + 0], data[j * 5 * 400 * 3 + i * 10 * 3 + 1], data[j * 5 * 400 * 3 + i * 10 * 3 + 2]));
-				memDC.SetBrush(wxColor(data[j * 5 * 400 * 3 + i * 10 * 3 + 0], data[j * 5 * 400 * 3 + i * 10 * 3 + 1], data[j * 5 * 400 * 3 + i * 10 * 3 + 2]));
-				memDC.DrawRectangle(500 - (width*i + width * j * 5), 50 + height * i - color, width * 10, color);
+				memDC.SetPen(wxColor(data[j * 5 * 500 * 3 + i * 10 * 3 + 0], data[j * 5 * 500 * 3 + i * 10 * 3 + 1], data[j * 5 * 500 * 3 + i * 10 * 3 + 2]));
+				memDC.SetBrush(wxColor(data[j * 5 * 500 * 3 + i * 10 * 3 + 0], data[j * 5 * 500 * 3 + i * 10 * 3 + 1], data[j * 5 * 500 * 3 + i * 10 * 3 + 2]));
+				memDC.DrawRectangle(500 - (width*i + width * j * 5), 150 + height * i - color, width * 10, color);
 			}
 		}
 
